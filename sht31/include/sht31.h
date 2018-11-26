@@ -34,8 +34,8 @@
 #define _COMPONENT_SHT31_H_
 
 #define SHT31_NUM 				I2C_NUM_0
-#define SHT31_SCL_IO    			18    /*!< gpio number for I2C master clock */
-#define SHT31_SDA_IO    			17    /*!< gpio number for I2C master data  */
+#define SHT31_SCL_IO    			16    /*!< gpio number for I2C master clock */
+#define SHT31_SDA_IO    			13    /*!< gpio number for I2C master data  */
 #define SHT31_FREQ_HZ    		100000     /*!< I2C master clock frequency */
 #define SHT31_TX_BUF_DISABLE   	0   /*!< I2C master do not need buffer */
 #define SHT31_RX_BUF_DISABLE   	0   /*!< I2C master do not need buffer */
