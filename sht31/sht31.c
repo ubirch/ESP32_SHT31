@@ -28,22 +28,21 @@
  */
 
 #include "sht31.h"
-#include "math.h"
 #include <driver/i2c.h>
+
+#define LOG_LOCAL_LEVEL ESP_LOG_INFO
 #include <esp_log.h>
 
-static char tag[] = "neosarchizo";
+static char tag[] = "SHT31";
 
 esp_err_t sht31_reset() {
 	i2c_cmd_handle_t cmd = i2c_cmd_link_create();
 	i2c_master_start(cmd);
-	i2c_master_write_byte(cmd, (SHT31_ADDRESS << 1) | I2C_MASTER_WRITE,
-	SHT31_ACK_CHECK_EN);
+    i2c_master_write_byte(cmd, (SHT31_ADDRESS << 1) | I2C_MASTER_WRITE, SHT31_ACK_CHECK_EN);
 	i2c_master_write_byte(cmd, 0x30, SHT31_ACK_CHECK_EN);
 	i2c_master_write_byte(cmd, 0xA2, SHT31_ACK_CHECK_EN);
 	i2c_master_stop(cmd);
-	esp_err_t ret = i2c_master_cmd_begin(SHT31_NUM, cmd,
-			1000 / portTICK_RATE_MS);
+    esp_err_t ret = i2c_master_cmd_begin(SHT31_NUM, cmd, 1000 / portTICK_RATE_MS);
 	i2c_cmd_link_delete(cmd);
 	if (ret == ESP_FAIL) {
 		return ESP_FAIL;
@@ -51,7 +50,7 @@ esp_err_t sht31_reset() {
 	return ESP_OK;
 }
 
-void sht31_init() {
+esp_err_t sht31_init() {
 	int i2c_master_port = SHT31_NUM;
 	i2c_config_t conf;
 	conf.mode = I2C_MODE_MASTER;
@@ -60,39 +59,40 @@ void sht31_init() {
 	conf.sda_pullup_en = GPIO_PULLUP_ENABLE;
 	conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
 	conf.master.clk_speed = SHT31_FREQ_HZ;
-	ESP_ERROR_CHECK(i2c_param_config(i2c_master_port, &conf));
-	ESP_ERROR_CHECK(
-			i2c_driver_install(i2c_master_port, conf.mode, SHT31_RX_BUF_DISABLE, SHT31_TX_BUF_DISABLE, 0));
-	vTaskDelay(200 / portTICK_PERIOD_MS);
 
-	ESP_ERROR_CHECK(sht31_reset());
-	vTaskDelay(10 / portTICK_PERIOD_MS);
+    esp_err_t err;
+    err = i2c_param_config(i2c_master_port, &conf);
+    if (err != ESP_OK) return err;
+    err = i2c_driver_install(i2c_master_port, conf.mode, SHT31_RX_BUF_DISABLE, SHT31_TX_BUF_DISABLE, 0);
+    if (err != ESP_OK) return err;
+    vTaskDelay(pdMS_TO_TICKS(200));
+
+    err = sht31_reset();
+    if (err != ESP_OK) return err;
+
+    vTaskDelay(pdMS_TO_TICKS(10));
+
+    return ESP_OK;
 }
 
 float sht31_readTemperature() {
-//	if (!sht31_readTempHum())
-//		return NAN;
 	return temp;
 }
 
 float sht31_readHumidity() {
-//	if (!sht31_readTempHum())
-//		return NAN;
 	return humidity;
 }
 
 bool sht31_readTempHum() {
 	i2c_cmd_handle_t cmd = i2c_cmd_link_create();
 	i2c_master_start(cmd);
-	i2c_master_write_byte(cmd, (SHT31_ADDRESS << 1) | I2C_MASTER_WRITE,
-	SHT31_ACK_CHECK_EN);
+    i2c_master_write_byte(cmd, (SHT31_ADDRESS << 1) | I2C_MASTER_WRITE, SHT31_ACK_CHECK_EN);
 	i2c_master_write_byte(cmd, 0x24, SHT31_ACK_CHECK_EN);
 	i2c_master_write_byte(cmd, 0x00, SHT31_ACK_CHECK_EN);
 	i2c_master_stop(cmd);
-	esp_err_t ret = i2c_master_cmd_begin(SHT31_NUM, cmd,
-			1000 / portTICK_RATE_MS);
+    esp_err_t err = i2c_master_cmd_begin(SHT31_NUM, cmd, 1000 / portTICK_RATE_MS);
 	i2c_cmd_link_delete(cmd);
-	if (ret == ESP_FAIL) {
+    if (err == ESP_FAIL) {
 		ESP_LOGD(tag, "0x2400 Failed");
 		return false;
 	}
@@ -103,21 +103,24 @@ bool sht31_readTempHum() {
 
 	cmd = i2c_cmd_link_create();
 	i2c_master_start(cmd);
-	i2c_master_write_byte(cmd, (SHT31_ADDRESS << 1) | I2C_MASTER_READ,
-	SHT31_ACK_CHECK_EN);
+    i2c_master_write_byte(cmd, (SHT31_ADDRESS << 1) | I2C_MASTER_READ, SHT31_ACK_CHECK_EN);
 
-	ESP_ERROR_CHECK(i2c_master_read_byte(cmd, readbuffer, SHT31_ACK_VAL));
-	ESP_ERROR_CHECK(i2c_master_read_byte(cmd, readbuffer + 1, SHT31_ACK_VAL));
-	ESP_ERROR_CHECK(i2c_master_read_byte(cmd, readbuffer + 2, SHT31_ACK_VAL));
-	ESP_ERROR_CHECK(i2c_master_read_byte(cmd, readbuffer + 3, SHT31_ACK_VAL));
-	ESP_ERROR_CHECK(i2c_master_read_byte(cmd, readbuffer + 4, SHT31_ACK_VAL));
-	ESP_ERROR_CHECK(i2c_master_read_byte(cmd, readbuffer + 5, SHT31_NACK_VAL));
+    err |= i2c_master_read_byte(cmd, readbuffer, SHT31_ACK_VAL);
+    err |= i2c_master_read_byte(cmd, readbuffer + 1, SHT31_ACK_VAL);
+    err |= i2c_master_read_byte(cmd, readbuffer + 2, SHT31_ACK_VAL);
+    err |= i2c_master_read_byte(cmd, readbuffer + 3, SHT31_ACK_VAL);
+    err |= i2c_master_read_byte(cmd, readbuffer + 4, SHT31_ACK_VAL);
+    err |= i2c_master_read_byte(cmd, readbuffer + 5, SHT31_NACK_VAL);
+    if (err != ESP_OK) {
+        ESP_LOGW(tag, "reading failed");
+        return false;
+    }
 
 	i2c_master_stop(cmd);
-	ret = i2c_master_cmd_begin(SHT31_NUM, cmd, 1000 / portTICK_PERIOD_MS);
+    err = i2c_master_cmd_begin(SHT31_NUM, cmd, 1000 / portTICK_PERIOD_MS);
 	i2c_cmd_link_delete(cmd);
 
-	if (ret == ESP_FAIL) {
+    if (err == ESP_FAIL) {
 		ESP_LOGD(tag, "reading Failed");
 		return false;
 	}
@@ -148,13 +151,13 @@ bool sht31_readTempHum() {
 	stemp *= 175;
 	stemp /= 0xffff;
 	stemp = -45 + stemp;
-	temp = stemp;
+    temp = (float) stemp;
 
 	double shum = SRH;
 	shum *= 100;
 	shum /= 0xFFFF;
 
-	humidity = shum;
+    humidity = (float) shum;
 
 	return true;
 }

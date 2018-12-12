@@ -46,7 +46,7 @@
 #define SHT31_ACK_VAL    0x0         /*!< I2C ack value */
 #define SHT31_NACK_VAL   0x1         /*!< I2C nack value */
 
-extern void sht31_init();
+extern esp_err_t sht31_init();
 extern float sht31_readTemperature();
 extern float sht31_readHumidity();
 extern bool sht31_readTempHum();
