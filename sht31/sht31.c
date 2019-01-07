@@ -30,7 +30,7 @@
 #include "sht31.h"
 #include <driver/i2c.h>
 
-#define LOG_LOCAL_LEVEL ESP_LOG_INFO
+#define LOG_LOCAL_LEVEL ESP_LOG_DEBUG
 #include <esp_log.h>
 
 static char tag[] = "SHT31";
